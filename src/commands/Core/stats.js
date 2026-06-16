@@ -17,18 +17,10 @@ export default {
         (acc, guild) => acc + guild.memberCount,
         0,
       );
-      const nodeVersion = process.version;
-
-      const embed = createEmbed({ title: "📊 System Statistics", description: "Real-time performance metrics." }).addFields(
+      const embed = createEmbed({ title: "📊 Bot Statistics", description: "Current bot metrics." }).addFields(
         { name: "Servers", value: `${totalGuilds}`, inline: true },
         { name: "Users", value: `${totalMembers}`, inline: true },
-        { name: "Node.js", value: `${nodeVersion}`, inline: true },
         { name: "Discord.js", value: `v${version}`, inline: true },
-        {
-          name: "Memory Usage",
-          value: `${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`,
-          inline: true,
-        },
       );
 
       await InteractionHelper.safeEditReply(interaction, { embeds: [embed] });

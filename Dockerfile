@@ -13,6 +13,11 @@ RUN npm ci --omit=dev
 # Bundle app source
 COPY . .
 
+# Run as non-root for defense-in-depth
+RUN addgroup -S titanbot && adduser -S titanbot -G titanbot \
+    && chown -R titanbot:titanbot /usr/src/app
+USER titanbot
+
 # Expose the health check port from src/app.js
 EXPOSE 3000
 
