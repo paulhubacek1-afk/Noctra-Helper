@@ -172,13 +172,17 @@ export default {
                 
                 const channel = guild.channels.cache.get(panel.channelId);
                 if (!channel) {
-                  await deleteReactionRoleMessage(client, guildId, panel.messageId).catch(() => {});
+                  await deleteReactionRoleMessage(client, guildId, panel.messageId).catch((err) => {
+                    logger.warn(`Failed to clean up orphaned reaction role panel ${panel.messageId}:`, err.message);
+                  });
                   continue;
                 }
                 
                 const msg = await channel.messages.fetch(panel.messageId).catch(() => null);
                 if (!msg) {
-                  await deleteReactionRoleMessage(client, guildId, panel.messageId).catch(() => {});
+                  await deleteReactionRoleMessage(client, guildId, panel.messageId).catch((err) => {
+                    logger.warn(`Failed to clean up orphaned reaction role panel ${panel.messageId}:`, err.message);
+                  });
                   continue;
                 }
                 validPanels.push(panel);
@@ -206,6 +210,7 @@ export default {
                       value: panel.messageId
                     };
                   } catch (e) {
+                    logger.debug('Error fetching reaction role panel for autocomplete:', e.message);
                     return null;
                   }
                 })

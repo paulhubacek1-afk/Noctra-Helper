@@ -135,7 +135,7 @@ export default {
                 }
             });
         } catch (error) {
-            logger.debug('Error logging member join:', error);
+            logger.warn('Error logging member join:', error);
         }
         
         
@@ -147,7 +147,7 @@ export default {
                 }
             }
         } catch (error) {
-            logger.debug('Error updating counters on member join:', error);
+            logger.warn('Error updating counters on member join:', error);
         }
         
         // Restore birthday data if the member previously left
@@ -162,7 +162,7 @@ export default {
                 logger.debug(`Birthday restored for user ${user.id} in guild ${guild.id}`);
             }
         } catch (error) {
-            logger.debug('Error restoring birthday on member join:', error);
+            logger.warn('Error restoring birthday on member join:', error);
         }
         
     } catch (error) {

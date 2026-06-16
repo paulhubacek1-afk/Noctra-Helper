@@ -80,7 +80,9 @@ export default {
                     const disabledComponents = createShopComponents(currentPage);
                     disabledComponents.forEach(row => row.components.forEach(btn => btn.setDisabled(true)));
                     await message.edit({ components: disabledComponents });
-                } catch (_) {}
+                } catch (err) {
+                    logger.debug('Failed to disable shop buttons after collector ended:', err.message);
+                }
             });
         } catch (error) {
             logger.error('shop_browse error:', error);

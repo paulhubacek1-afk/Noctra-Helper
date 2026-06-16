@@ -344,34 +344,29 @@ export async function getLoggingStatus(client, guildId) {
 
 
 export async function toggleEventLogging(client, guildId, eventTypes, enabled) {
-  try {
-    const { updateGuildConfig } = await import('./guildConfig.js');
-    const config = await getGuildConfig(client, guildId);
-    
-    const logging = config.logging || { enabled: false, enabledEvents: {} };
-    const types = Array.isArray(eventTypes) ? eventTypes : [eventTypes];
-    
-    types.forEach(type => {
-      if (type.endsWith('.*')) {
-        const category = type.replace('.*', '');
-        const matchingTypes = Object.values(EVENT_TYPES).filter(
-          eventType => eventType.startsWith(`${category}.`)
-        );
-        matchingTypes.forEach(eventType => {
-          logging.enabledEvents[eventType] = enabled;
-        });
-        logging.enabledEvents[type] = enabled;
-      } else {
-        logging.enabledEvents[type] = enabled;
-      }
-    });
+  const { updateGuildConfig } = await import('./guildConfig.js');
+  const config = await getGuildConfig(client, guildId);
+  
+  const logging = config.logging || { enabled: false, enabledEvents: {} };
+  const types = Array.isArray(eventTypes) ? eventTypes : [eventTypes];
+  
+  types.forEach(type => {
+    if (type.endsWith('.*')) {
+      const category = type.replace('.*', '');
+      const matchingTypes = Object.values(EVENT_TYPES).filter(
+        eventType => eventType.startsWith(`${category}.`)
+      );
+      matchingTypes.forEach(eventType => {
+        logging.enabledEvents[eventType] = enabled;
+      });
+      logging.enabledEvents[type] = enabled;
+    } else {
+      logging.enabledEvents[type] = enabled;
+    }
+  });
 
-    await updateGuildConfig(client, guildId, { logging });
-    return true;
-  } catch (error) {
-    logger.error('Error toggling event logging:', error);
-    return false;
-  }
+  await updateGuildConfig(client, guildId, { logging });
+  return true;
 }
 
 
@@ -382,20 +377,15 @@ export async function toggleEventLogging(client, guildId, eventTypes, enabled) {
 
 
 export async function setLoggingChannel(client, guildId, channelId) {
-  try {
-    const { updateGuildConfig } = await import('./guildConfig.js');
-    const config = await getGuildConfig(client, guildId);
-    
-    const logging = config.logging || { enabled: false, enabledEvents: {} };
-    logging.channelId = channelId;
-    logging.enabled = true;
+  const { updateGuildConfig } = await import('./guildConfig.js');
+  const config = await getGuildConfig(client, guildId);
+  
+  const logging = config.logging || { enabled: false, enabledEvents: {} };
+  logging.channelId = channelId;
+  logging.enabled = true;
 
-    await updateGuildConfig(client, guildId, { logging });
-    return true;
-  } catch (error) {
-    logger.error('Error setting logging channel:', error);
-    return false;
-  }
+  await updateGuildConfig(client, guildId, { logging });
+  return true;
 }
 
 
@@ -406,19 +396,14 @@ export async function setLoggingChannel(client, guildId, channelId) {
 
 
 export async function setLoggingEnabled(client, guildId, enabled) {
-  try {
-    const { updateGuildConfig } = await import('./guildConfig.js');
-    const config = await getGuildConfig(client, guildId);
-    
-    const logging = config.logging || { enabledEvents: {} };
-    logging.enabled = enabled;
+  const { updateGuildConfig } = await import('./guildConfig.js');
+  const config = await getGuildConfig(client, guildId);
+  
+  const logging = config.logging || { enabledEvents: {} };
+  logging.enabled = enabled;
 
-    await updateGuildConfig(client, guildId, { logging });
-    return true;
-  } catch (error) {
-    logger.error('Error setting logging enabled:', error);
-    return false;
-  }
+  await updateGuildConfig(client, guildId, { logging });
+  return true;
 }
 
 export { EVENT_TYPES, EVENT_COLORS, EVENT_ICONS };
