@@ -228,9 +228,15 @@ class TitanBot extends Client {
   }
 
   setupCronJobs() {
-    cron.schedule('0 6 * * *', () => checkBirthdays(this));
-    cron.schedule('* * * * *', () => checkGiveaways(this));
-    cron.schedule('*/15 * * * *', () => this.updateAllCounters());
+    cron.schedule('0 6 * * *', () => {
+      checkBirthdays(this).catch(err => logger.error('Cron: birthday check failed:', err));
+    });
+    cron.schedule('* * * * *', () => {
+      checkGiveaways(this).catch(err => logger.error('Cron: giveaway check failed:', err));
+    });
+    cron.schedule('*/15 * * * *', () => {
+      this.updateAllCounters().catch(err => logger.error('Cron: counter update failed:', err));
+    });
   }
 
   async updateAllCounters() {
@@ -304,6 +310,7 @@ class TitanBot extends Client {
       await registerSlashCommands(this, this.config.bot.guildId);
     } catch (error) {
       logger.error('Error registering commands:', error);
+      throw error;
     }
   }
 

@@ -70,10 +70,9 @@ export async function getEconomyData(client, guildId, userId) {
 
 
 export async function setEconomyData(client, guildId, userId, newData) {
+    const key = getEconomyKey(guildId, userId);
     let mergedData = null;
     try {
-        const key = getEconomyKey(guildId, userId);
-        
         const existingData = await getEconomyData(client, guildId, userId);
         mergedData = normalizeEconomyData(
             { ...existingData, ...newData },
@@ -83,7 +82,7 @@ export async function setEconomyData(client, guildId, userId, newData) {
         await setInDb(key, mergedData);
         return true;
     } catch (error) {
-        logger.error('Error saving economy data:', error);
+        logger.error(`Error saving economy data for user ${userId} in guild ${guildId}:`, error);
         
         if (error.message && (error.message.includes('ECONNREFUSED') || error.message.includes('connection'))) {
             logger.warn(`PostgreSQL unavailable, using memory fallback for guild ${guildId}`);
@@ -95,7 +94,7 @@ export async function setEconomyData(client, guildId, userId, newData) {
             return true;
         }
         
-        return false;
+        throw error;
     }
 }
 
@@ -299,7 +298,7 @@ export async function checkCooldown(client, guildId, userId, action, cooldownTim
         
     } catch (error) {
         logger.error(`Error checking cooldown for ${action} for user ${userId} in guild ${guildId}:`, error);
-        return { onCooldown: true, timeLeft: cooldownTime };
+        return { onCooldown: false, error: 'Failed to check cooldown' };
     }
 }
 

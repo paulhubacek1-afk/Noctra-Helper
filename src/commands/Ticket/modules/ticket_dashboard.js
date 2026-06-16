@@ -140,7 +140,9 @@ async function refreshDashboard(rootInteraction, guildConfig, guildId) {
     await InteractionHelper.safeEditReply(rootInteraction, {
         embeds: [buildDashboardEmbed(guildConfig, rootInteraction.guild)],
         components: [buttonRow, selectRow],
-    }).catch(() => {});
+    }).catch((err) => {
+        logger.warn('Failed to refresh ticket dashboard:', err.message);
+    });
 }
 
 /**
