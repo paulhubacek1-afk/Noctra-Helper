@@ -1,10 +1,10 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder } from 'discord.js';
+import { createEmbed } from '../../utils/embeds.js';
 import { shopItems } from '../../config/shop/items.js';
-import { getEconomyData } from '../../utils/economy.js';
-import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { withErrorHandling } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { requireEconomyData } from '../../utils/economyHelpers.js';
 
 const SHOP_ITEMS = shopItems;
 
@@ -22,16 +22,7 @@ export default {
 
             logger.debug(`[ECONOMY] Inventory requested for ${userId}`, { userId, guildId });
 
-            const userData = await getEconomyData(client, guildId, userId);
-
-            if (!userData) {
-                throw createError(
-                    "Failed to load economy data for inventory",
-                    ErrorTypes.DATABASE,
-                    "Failed to load your economy data. Please try again later.",
-                    { userId, guildId }
-                );
-            }
+            const userData = await requireEconomyData(client, guildId, userId);
 
             const inventory = userData.inventory || {};
 

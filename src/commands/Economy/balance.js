@@ -1,9 +1,10 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getEconomyData, getMaxBankCapacity } from '../../utils/economy.js';
+import { createEmbed } from '../../utils/embeds.js';
+import { getMaxBankCapacity } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { requireEconomyData } from '../../utils/economyHelpers.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -33,16 +34,7 @@ export default {
                 );
             }
 
-            const userData = await getEconomyData(client, guildId, targetUser.id);
-            
-            if (!userData) {
-                throw createError(
-                    "Failed to load economy data",
-                    ErrorTypes.DATABASE,
-                    "Failed to load economy data. Please try again later.",
-                    { userId: targetUser.id, guildId }
-                );
-            }
+            const userData = await requireEconomyData(client, guildId, targetUser.id);
 
             const maxBank = getMaxBankCapacity(userData);
 

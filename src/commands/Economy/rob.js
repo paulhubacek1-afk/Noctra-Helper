@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getEconomyData, setEconomyData } from '../../utils/economy.js';
+import { setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { requireEconomyData, enforceCooldown } from '../../utils/economyHelpers.js';
 
 const ROB_COOLDOWN = 4 * 60 * 60 * 1000;
 const BASE_ROB_SUCCESS_CHANCE = 0.25;
@@ -48,32 +48,10 @@ export default {
                 );
             }
 
-            const robberData = await getEconomyData(client, guildId, robberId);
-            const victimData = await getEconomyData(client, guildId, victimUser.id);
-            
-            if (!robberData || !victimData) {
-                throw createError(
-                    "Failed to load economy data",
-                    ErrorTypes.DATABASE,
-                    "Failed to load economy data. Please try again later.",
-                    { robberId: !!robberData, victimId: !!victimData, guildId }
-                );
-            }
-            
-            const lastRob = robberData.lastRob || 0;
+            const robberData = await requireEconomyData(client, guildId, robberId);
+            const victimData = await requireEconomyData(client, guildId, victimUser.id);
 
-            if (now < lastRob + ROB_COOLDOWN) {
-                const remaining = lastRob + ROB_COOLDOWN - now;
-                const hours = Math.floor(remaining / (1000 * 60 * 60));
-                const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-
-                throw createError(
-                    "Robbery cooldown active",
-                    ErrorTypes.RATE_LIMIT,
-                    `You need to lay low. Wait **${hours}h ${minutes}m** before attempting another robbery.`,
-                    { remaining, hours, minutes, cooldownType: 'rob' }
-                );
-            }
+            enforceCooldown(robberData, 'lastRob', ROB_COOLDOWN, 'robbing');
 
             if (victimData.wallet < 500) {
                 throw createError(

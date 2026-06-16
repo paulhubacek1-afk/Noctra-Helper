@@ -1,9 +1,10 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { errorEmbed, successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
+import { validateModerationTarget } from '../../utils/moderationHelpers.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -23,7 +24,6 @@ export default {
 
   async execute(interaction, config, client) {
     try {
-      
       if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
         throw new TitanBotError(
           "User lacks permission",
@@ -36,51 +36,14 @@ export default {
       const member = interaction.options.getMember("target");
       const reason = interaction.options.getString("reason") || "No reason provided";
 
-      
-      if (targetUser.id === interaction.user.id) {
-        throw new TitanBotError(
-          "Cannot kick self",
-          ErrorTypes.VALIDATION,
-          "You cannot kick yourself."
-        );
-      }
-
-      
-      if (targetUser.id === client.user.id) {
-        throw new TitanBotError(
-          "Cannot kick bot",
-          ErrorTypes.VALIDATION,
-          "You cannot kick the bot."
-        );
-      }
-
-      
-      if (!member) {
-        throw new TitanBotError(
-          "Target not found",
-          ErrorTypes.USER_INPUT,
-          "The target user is not currently in this server.",
-          { subtype: 'user_not_found' }
-        );
-      }
-
-      
-      if (interaction.member.roles.highest.position <= member.roles.highest.position) {
-        throw new TitanBotError(
-          "Cannot kick user",
-          ErrorTypes.PERMISSION,
-          "You cannot kick a user with an equal or higher role than you."
-        );
-      }
-
-      
-      if (!member.kickable) {
-        throw new TitanBotError(
-          "Bot cannot kick",
-          ErrorTypes.PERMISSION,
-          "I cannot kick this user. Please check my role position relative to the target user."
-        );
-      }
+      validateModerationTarget({
+        interaction,
+        targetUser,
+        member,
+        client,
+        action: 'kick',
+        checks: { self: true, bot: true, inGuild: true, hierarchy: true, actionable: true },
+      });
 
       
       await member.kick(reason);

@@ -1,10 +1,9 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getEconomyData, setEconomyData, getMaxBankCapacity } from '../../utils/economy.js';
+import { setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
-
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { requireEconomyData } from '../../utils/economyHelpers.js';
 export default {
     data: new SlashCommandBuilder()
         .setName('withdraw')
@@ -24,16 +23,7 @@ export default {
             const guildId = interaction.guildId;
             const amountInput = interaction.options.getInteger("amount");
 
-            const userData = await getEconomyData(client, guildId, userId);
-            
-            if (!userData) {
-                throw createError(
-                    "Failed to load economy data",
-                    ErrorTypes.DATABASE,
-                    "Failed to load your economy data. Please try again later.",
-                    { userId, guildId }
-                );
-            }
+            const userData = await requireEconomyData(client, guildId, userId);
 
             let withdrawAmount = amountInput;
 

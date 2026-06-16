@@ -1,9 +1,10 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getEconomyData, setEconomyData } from '../../utils/economy.js';
-import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { MessageTemplates } from '../../utils/messageTemplates.js';
+import { createEmbed } from '../../utils/embeds.js';
+import { setEconomyData } from '../../utils/economy.js';
+import { withErrorHandling } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { randomInt, randomChoice } from '../../utils/random.js';
+import { requireEconomyData, enforceCooldown, applyItemMultiplier } from '../../utils/economyHelpers.js';
 
 const FISH_COOLDOWN = 45 * 60 * 1000; 
 const BASE_MIN_REWARD = 300;
@@ -43,60 +44,31 @@ export default {
             const guildId = interaction.guildId;
             const now = Date.now();
 
-            const userData = await getEconomyData(client, guildId, userId);
-            const lastFish = userData.lastFish || 0;
-            const hasFishingRod = userData.inventory["fishing_rod"] || 0;
+            const userData = await requireEconomyData(client, guildId, userId);
 
-            if (now < lastFish + FISH_COOLDOWN) {
-                const remaining = lastFish + FISH_COOLDOWN - now;
-                const hours = Math.floor(remaining / (1000 * 60 * 60));
-                const minutes = Math.floor(
-                    (remaining % (1000 * 60 * 60)) / (1000 * 60),
-                );
+            enforceCooldown(userData, 'lastFish', FISH_COOLDOWN, 'fishing');
 
-                throw createError(
-                    "Fishing cooldown active",
-                    ErrorTypes.RATE_LIMIT,
-                    `You're too tired to fish right now. Rest for **${hours}h ${minutes}m** before fishing again.`,
-                    { remaining, cooldownType: 'fish' }
-                );
-            }
-
-            
             const rand = Math.random();
             let fishCaught;
-            
+
             if (rand < 0.5) {
-                
-                fishCaught = FISH_TYPES.filter(f => f.rarity === 'common')[Math.floor(Math.random() * 3)];
+                fishCaught = randomChoice(FISH_TYPES.filter(f => f.rarity === 'common'));
             } else if (rand < 0.75) {
-                
-                fishCaught = FISH_TYPES.filter(f => f.rarity === 'uncommon')[Math.floor(Math.random() * 2)];
+                fishCaught = randomChoice(FISH_TYPES.filter(f => f.rarity === 'uncommon'));
             } else if (rand < 0.9) {
-                
-                fishCaught = FISH_TYPES.filter(f => f.rarity === 'rare')[Math.floor(Math.random() * 2)];
+                fishCaught = randomChoice(FISH_TYPES.filter(f => f.rarity === 'rare'));
             } else if (rand < 0.98) {
-                
                 fishCaught = FISH_TYPES.find(f => f.rarity === 'epic');
             } else {
-                
                 fishCaught = FISH_TYPES.find(f => f.rarity === 'legendary');
             }
 
-            const baseEarned = Math.floor(
-                Math.random() * (BASE_MAX_REWARD - BASE_MIN_REWARD + 1)
-            ) + BASE_MIN_REWARD;
+            const baseEarned = randomInt(BASE_MIN_REWARD, BASE_MAX_REWARD);
 
-            let finalEarned = baseEarned;
-            let multiplierMessage = "";
+            const { amount: finalEarned, bonusMessage: multiplierMessage } =
+                applyItemMultiplier(baseEarned, userData.inventory, 'fishing_rod', FISHING_ROD_MULTIPLIER, '🎣 **Fishing Rod Bonus: +50%**');
 
-            
-            if (hasFishingRod > 0) {
-                finalEarned = Math.floor(baseEarned * FISHING_ROD_MULTIPLIER);
-                multiplierMessage = `\n🎣 **Fishing Rod Bonus: +50%**`;
-            }
-
-            const catchMessage = CATCH_MESSAGES[Math.floor(Math.random() * CATCH_MESSAGES.length)];
+            const catchMessage = randomChoice(CATCH_MESSAGES);
 
             userData.wallet += finalEarned;
             userData.lastFish = now;

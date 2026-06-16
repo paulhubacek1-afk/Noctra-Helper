@@ -1,10 +1,10 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { logModerationAction } from '../../utils/moderation.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { successEmbed } from '../../utils/embeds.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { ModerationService } from '../../services/moderationService.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
+import { validateModerationTarget } from '../../utils/moderationHelpers.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("ban")
@@ -26,12 +26,14 @@ export default {
             const user = interaction.options.getUser("target");
             const reason = interaction.options.getString("reason") || "No reason provided";
 
-            if (user.id === interaction.user.id) {
-                throw new Error("You cannot ban yourself.");
-            }
-            if (user.id === client.user.id) {
-                throw new Error("You cannot ban the bot.");
-            }
+            validateModerationTarget({
+                interaction,
+                targetUser: user,
+                member: null,
+                client,
+                action: 'ban',
+                checks: { self: true, bot: true, inGuild: false },
+            });
 
             
             const result = await ModerationService.banUser({

@@ -1,9 +1,10 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getEconomyData, setEconomyData } from '../../utils/economy.js';
+import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { randomInt } from '../../utils/random.js';
+import { requireEconomyData, enforceCooldown } from '../../utils/economyHelpers.js';
 
 const CRIME_COOLDOWN = 60 * 60 * 1000;
 const MIN_CRIME_AMOUNT = 100;
@@ -44,7 +45,7 @@ export default {
             const guildId = interaction.guildId;
             const now = Date.now();
 
-            const userData = await getEconomyData(client, guildId, userId);
+            const userData = await requireEconomyData(client, guildId, userId);
             const lastCrime = userData.cooldowns?.crime || 0;
             const isJailed = userData.jailedUntil && userData.jailedUntil > now;
 
@@ -58,15 +59,7 @@ export default {
                 );
             }
 
-            if (now < lastCrime + CRIME_COOLDOWN) {
-                const timeLeft = Math.ceil((lastCrime + CRIME_COOLDOWN - now) / (1000 * 60));
-                throw createError(
-                    "Crime cooldown active",
-                    ErrorTypes.RATE_LIMIT,
-                    `You need to wait ${timeLeft} more minutes before committing another crime.`,
-                    { remaining: lastCrime + CRIME_COOLDOWN - now, cooldownType: 'crime' }
-                );
-            }
+            enforceCooldown({ lastCrime }, 'lastCrime', CRIME_COOLDOWN, 'committing crimes');
 
             const crimeType = interaction.options.getString("type").toLowerCase();
             const crime = CRIME_TYPES.find(
@@ -84,7 +77,7 @@ export default {
 
             const isSuccess = Math.random() > crime.risk;
             const amountEarned = isSuccess
-                ? Math.floor(Math.random() * (crime.max - crime.min + 1)) + crime.min
+                ? randomInt(crime.min, crime.max)
                 : 0;
 
             userData.cooldowns = userData.cooldowns || {};

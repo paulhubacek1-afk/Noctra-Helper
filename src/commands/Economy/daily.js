@@ -1,11 +1,11 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getEconomyData, setEconomyData } from '../../utils/economy.js';
+import { successEmbed } from '../../utils/embeds.js';
+import { setEconomyData } from '../../utils/economy.js';
 import { getGuildConfig } from '../../services/guildConfig.js';
-import { formatDuration } from '../../utils/helpers.js';
-import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { withErrorHandling } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { requireEconomyData, enforceCooldown } from '../../utils/economyHelpers.js';
 
 const DAILY_COOLDOWN = 24 * 60 * 60 * 1000;
 const DAILY_AMOUNT = 1000;
@@ -26,28 +26,9 @@ export default {
 
             logger.debug(`[ECONOMY] Daily claimed started for ${userId}`, { userId, guildId });
 
-            const userData = await getEconomyData(client, guildId, userId);
-            
-            if (!userData) {
-                throw createError(
-                    "Failed to load economy data for daily",
-                    ErrorTypes.DATABASE,
-                    "Failed to load your economy data. Please try again later.",
-                    { userId, guildId }
-                );
-            }
-            
-            const lastDaily = userData.lastDaily || 0;
+            const userData = await requireEconomyData(client, guildId, userId);
 
-            if (now < lastDaily + DAILY_COOLDOWN) {
-                const timeRemaining = lastDaily + DAILY_COOLDOWN - now;
-                throw createError(
-                    "Daily cooldown active",
-                    ErrorTypes.RATE_LIMIT,
-                    `You need to wait before claiming daily again. Try again in **${formatDuration(timeRemaining)}**.`,
-                    { timeRemaining, cooldownType: 'daily' }
-                );
-            }
+            enforceCooldown(userData, 'lastDaily', DAILY_COOLDOWN, 'claiming daily');
 
             const guildConfig = await getGuildConfig(client, guildId);
             const PREMIUM_ROLE_ID = guildConfig.premiumRoleId;
