@@ -111,13 +111,22 @@ class TitanBot extends Client {
     const corsOrigin = this.config.api?.cors?.origin || '*';
     
     app.use((req, res, next) => {
+      res.header('X-Content-Type-Options', 'nosniff');
+      res.header('X-Frame-Options', 'DENY');
+      res.header('X-XSS-Protection', '0');
+      res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+      res.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
       const allowedOrigins = Array.isArray(corsOrigin) ? corsOrigin : [corsOrigin];
       const origin = req.headers.origin;
-      
-      if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-        res.header('Access-Control-Allow-Origin', origin || '*');
+
+      if (allowedOrigins.includes('*')) {
+        res.header('Access-Control-Allow-Origin', '*');
+      } else if (origin && allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Vary', 'Origin');
       }
-      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
       res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       
       if (req.method === 'OPTIONS') {
@@ -155,11 +164,9 @@ class TitanBot extends Client {
       const status = {
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
         database: {
           connected: dbStatus.connectionType !== 'none',
-          degraded: dbStatus.isDegraded,
-          type: dbStatus.connectionType
+          degraded: dbStatus.isDegraded
         }
       };
       res.status(200).json(status);

@@ -113,7 +113,7 @@ export function createEmbed({
 }
 
 export function errorEmbed(message, error = null, options = {}) {
-  const { showDetails = process.env.NODE_ENV !== 'production' } = options;
+  const { showDetails = false } = options;
   let description = message;
 
   if (error && showDetails) {
