@@ -1,11 +1,11 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getEconomyData, addMoney, removeMoney, setEconomyData } from '../../utils/economy.js';
+import { getEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
 import { logger } from '../../utils/logger.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import EconomyService from '../../services/economyService.js';
+import { requireEconomyData } from '../../utils/economyHelpers.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -69,27 +69,9 @@ export default {
             }
 
             const [senderData, receiverData] = await Promise.all([
-                getEconomyData(client, guildId, senderId),
-                getEconomyData(client, guildId, receiver.id)
+                requireEconomyData(client, guildId, senderId),
+                requireEconomyData(client, guildId, receiver.id)
             ]);
-
-            if (!senderData) {
-                throw createError(
-                    "Failed to load sender economy data",
-                    ErrorTypes.DATABASE,
-                    "Failed to load your economy data. Please try again later.",
-                    { userId: senderId, guildId }
-                );
-            }
-            
-            if (!receiverData) {
-                throw createError(
-                    "Failed to load receiver economy data",
-                    ErrorTypes.DATABASE,
-                    "Failed to load the receiver's economy data. Please try again later.",
-                    { userId: receiver.id, guildId }
-                );
-            }
 
             
             

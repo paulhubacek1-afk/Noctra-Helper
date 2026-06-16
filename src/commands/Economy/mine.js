@@ -1,9 +1,10 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getEconomyData, setEconomyData } from '../../utils/economy.js';
-import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { MessageTemplates } from '../../utils/messageTemplates.js';
+import { successEmbed } from '../../utils/embeds.js';
+import { setEconomyData } from '../../utils/economy.js';
+import { withErrorHandling } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { randomInt, randomChoice } from '../../utils/random.js';
+import { requireEconomyData, enforceCooldown, applyItemMultiplier } from '../../utils/economyHelpers.js';
 
 const MINE_COOLDOWN = 60 * 60 * 1000;
 const BASE_MIN_REWARD = 400;
@@ -32,46 +33,22 @@ export default {
             const guildId = interaction.guildId;
             const now = Date.now();
 
-            const userData = await getEconomyData(client, guildId, userId);
-            const lastMine = userData.lastMine || 0;
-            const hasDiamondPickaxe = userData.inventory["diamond_pickaxe"] || 0;
-            const hasPickaxe = userData.inventory["pickaxe"] || 0;
+            const userData = await requireEconomyData(client, guildId, userId);
 
-            if (now < lastMine + MINE_COOLDOWN) {
-                const remaining = lastMine + MINE_COOLDOWN - now;
-                const hours = Math.floor(remaining / (1000 * 60 * 60));
-                const minutes = Math.floor(
-                    (remaining % (1000 * 60 * 60)) / (1000 * 60),
-                );
+            enforceCooldown(userData, 'lastMine', MINE_COOLDOWN, 'mining');
 
-                throw createError(
-                    "Mining cooldown active",
-                    ErrorTypes.RATE_LIMIT,
-                    `Your pickaxe is cooling down. Wait for **${hours}h ${minutes}m** before mining again.`,
-                    { remaining, cooldownType: 'mine' }
-                );
+            const baseEarned = randomInt(BASE_MIN_REWARD, BASE_MAX_REWARD);
+            const inventory = userData.inventory || {};
+
+            let { amount: finalEarned, bonusMessage: multiplierMessage } =
+                applyItemMultiplier(baseEarned, inventory, 'diamond_pickaxe', DIAMOND_PICKAXE_MULTIPLIER, '💎 **Diamond Pickaxe Bonus: +100%**');
+
+            if (!multiplierMessage) {
+                ({ amount: finalEarned, bonusMessage: multiplierMessage } =
+                    applyItemMultiplier(baseEarned, inventory, 'pickaxe', PICKAXE_MULTIPLIER, '⛏️ **Pickaxe Bonus: +20%**'));
             }
 
-            const baseEarned =
-                Math.floor(
-                    Math.random() * (BASE_MAX_REWARD - BASE_MIN_REWARD + 1),
-                ) + BASE_MIN_REWARD;
-
-            let finalEarned = baseEarned;
-            let multiplierMessage = "";
-
-            if (hasDiamondPickaxe > 0) {
-                finalEarned = Math.floor(baseEarned * DIAMOND_PICKAXE_MULTIPLIER);
-                multiplierMessage = `\n💎 **Diamond Pickaxe Bonus: +100%**`;
-            } else if (hasPickaxe > 0) {
-                finalEarned = Math.floor(baseEarned * PICKAXE_MULTIPLIER);
-                multiplierMessage = `\n⛏️ **Pickaxe Bonus: +20%**`;
-            }
-
-            const location =
-                MINE_LOCATIONS[
-                    Math.floor(Math.random() * MINE_LOCATIONS.length)
-                ];
+            const location = randomChoice(MINE_LOCATIONS);
 
             userData.wallet += finalEarned;
 userData.lastMine = now;

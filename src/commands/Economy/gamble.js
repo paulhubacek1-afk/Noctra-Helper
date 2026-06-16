@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getEconomyData, setEconomyData } from '../../utils/economy.js';
+import { errorEmbed, successEmbed } from '../../utils/embeds.js';
+import { setEconomyData } from '../../utils/economy.js';
 import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
-import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { requireEconomyData, enforceCooldown } from '../../utils/economyHelpers.js';
 
 const BASE_WIN_CHANCE = 0.4;
 const CLOVER_WIN_BONUS = 0.1;
@@ -32,23 +32,11 @@ export default {
             const betAmount = interaction.options.getInteger("amount");
             const now = Date.now();
 
-            const userData = await getEconomyData(client, guildId, userId);
-            const lastGamble = userData.lastGamble || 0;
+            const userData = await requireEconomyData(client, guildId, userId);
             let cloverCount = userData.inventory["lucky_clover"] || 0;
             let charmCount = userData.inventory["lucky_charm"] || 0;
 
-            if (now < lastGamble + GAMBLE_COOLDOWN) {
-                const remaining = lastGamble + GAMBLE_COOLDOWN - now;
-                const minutes = Math.floor(remaining / (1000 * 60));
-                const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-
-                throw createError(
-                    "Gamble cooldown active",
-                    ErrorTypes.RATE_LIMIT,
-                    `You need to cool down before gambling again. Wait **${minutes}m ${seconds}s**.`,
-                    { remaining, cooldownType: 'gamble' }
-                );
-            }
+            enforceCooldown(userData, 'lastGamble', GAMBLE_COOLDOWN, 'gambling');
 
             if (userData.wallet < betAmount) {
                 throw createError(

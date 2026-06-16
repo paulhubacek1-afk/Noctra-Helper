@@ -1,11 +1,10 @@
-import { SlashCommandBuilder, PermissionFlagsBits, PermissionsBitField, ChannelType } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { successEmbed } from '../../utils/embeds.js';
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { TitanBotError, ErrorTypes } from '../../utils/errorHandler.js';
-
-
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { validateModerationTarget } from '../../utils/moderationHelpers.js';
 const durationChoices = [
     { name: "5 minutes", value: 5 },
     { name: "10 minutes", value: 10 },
@@ -64,35 +63,14 @@ export default {
             const durationMinutes = interaction.options.getInteger("duration");
             const reason = interaction.options.getString("reason") || "No reason provided";
 
-            if (targetUser.id === interaction.user.id) {
-                throw new TitanBotError(
-                    "Cannot timeout self",
-                    ErrorTypes.VALIDATION,
-                    "You cannot timeout yourself."
-                );
-            }
-            if (targetUser.id === client.user.id) {
-                throw new TitanBotError(
-                    "Cannot timeout bot",
-                    ErrorTypes.VALIDATION,
-                    "You cannot timeout the bot."
-                );
-            }
-            if (!member) {
-                throw new TitanBotError(
-                    "Target not found",
-                    ErrorTypes.USER_INPUT,
-                    "The target user is not currently in this server."
-                );
-            }
-
-            if (!member.moderatable) {
-                throw new TitanBotError(
-                    "Cannot timeout member",
-                    ErrorTypes.PERMISSION,
-                    "I cannot timeout this user. They might have a higher role than me or you."
-                );
-            }
+            validateModerationTarget({
+                interaction,
+                targetUser,
+                member,
+                client,
+                action: 'timeout',
+                checks: { self: true, bot: true, inGuild: true, actionable: true },
+            });
 
             const durationMs = durationMinutes * 60 * 1000;
             await member.timeout(durationMs, reason);

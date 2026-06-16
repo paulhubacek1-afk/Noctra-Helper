@@ -1,10 +1,10 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '../../utils/embeds.js';
-import { getEconomyData, setEconomyData } from '../../utils/economy.js';
-import { botConfig } from '../../config/bot.js';
-import { withErrorHandling, createError, ErrorTypes } from '../../utils/errorHandler.js';
+import { setEconomyData } from '../../utils/economy.js';
+import { withErrorHandling } from '../../utils/errorHandler.js';
 import { MessageTemplates } from '../../utils/messageTemplates.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
+import { randomInt, randomChoice } from '../../utils/random.js';
+import { requireEconomyData, enforceCooldown } from '../../utils/economyHelpers.js';
 
 const COOLDOWN = 30 * 60 * 1000;
 const MIN_WIN = 50;
@@ -23,34 +23,9 @@ export default {
             const userId = interaction.user.id;
             const guildId = interaction.guildId;
 
-            let userData = await getEconomyData(client, guildId, userId);
-            
-            if (!userData) {
-                throw createError(
-                    "Failed to load economy data",
-                    ErrorTypes.DATABASE,
-                    "Failed to load your economy data. Please try again later.",
-                    { userId, guildId }
-                );
-            }
+            let userData = await requireEconomyData(client, guildId, userId);
 
-            const lastBeg = userData.lastBeg || 0;
-            const remainingTime = lastBeg + COOLDOWN - Date.now();
-
-            if (remainingTime > 0) {
-                const minutes = Math.floor(remainingTime / 60000);
-                const seconds = Math.floor((remainingTime % 60000) / 1000);
-
-                let timeMessage =
-                    minutes > 0 ? `${minutes} minute(s)` : `${seconds} second(s)`;
-
-                throw createError(
-                    "Beg cooldown active",
-                    ErrorTypes.RATE_LIMIT,
-                    `You are tired from begging! Try again in **${timeMessage}**.`,
-                    { remainingTime, minutes, seconds, cooldownType: 'beg' }
-                );
-            }
+            enforceCooldown(userData, 'lastBeg', COOLDOWN, 'begging');
 
             const success = Math.random() < SUCCESS_CHANCE;
 
@@ -58,8 +33,7 @@ export default {
             let newCash = userData.wallet;
 
             if (success) {
-                const amountWon =
-                    Math.floor(Math.random() * (MAX_WIN - MIN_WIN + 1)) + MIN_WIN;
+                const amountWon = randomInt(MIN_WIN, MAX_WIN);
 
                 newCash += amountWon;
 
@@ -72,9 +46,7 @@ export default {
 
                 replyEmbed = MessageTemplates.SUCCESS.DATA_UPDATED(
                     "begging",
-                    successMessages[
-                        Math.floor(Math.random() * successMessages.length)
-                    ]
+                    randomChoice(successMessages)
                 );
             } else {
                 const failMessages = [
@@ -88,7 +60,7 @@ export default {
                     "nothing",
                     "You failed to get any money from begging."
                 );
-                replyEmbed.data.description = failMessages[Math.floor(Math.random() * failMessages.length)];
+                replyEmbed.data.description = randomChoice(failMessages);
             }
 
             userData.wallet = newCash;
